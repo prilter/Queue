@@ -1,0 +1,14 @@
+asciidoc==10.2.1
+attrs==25.4.0
+btrfsutil==6.17.1
+cffi==2.0.0
+cryptography==46.0.3
+dbus-python==1.4.0
+filelock==3.20.0
+nftables==0.1
+packaging==25.0
+pycparser==2.23
+PyGObject==3.54.5
+ranger-fm==1.9.4
+Reflector==2023.6.28.0.36.1
+wheel==0.45.1
