@@ -2,4 +2,7 @@
 ANALISE AND REALISE QUEUE LOGIC
 """
 
-notification = "🔔 **Напоминание по среде!**\nПроверь очередь: /queue(не реализовано)"
+users_db  = set()
+hist_list = set()
+org_list  = set()
+
