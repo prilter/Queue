@@ -5,12 +5,13 @@ users_db  = {} # {user_id: {"username": "@nick"}}
 org_list  = {} # {user_id: {"username": "@nick"}} for "орг"
 hist_list = {} # {user_id: {"username": "@nick"}} for "история"
 
-def adduser(user_id, username):
-    """Добавляет/обновляет пользователя (умный — по ID)"""
-    users_db[user_id] = {"username": username or "no_username"}
+is_permitted_joining = True 
+
+def adduser(uid, uname): # SMART ADDING USER TO UB(user base)
+    users_db[uid] = {"username": uname or "no_username"}
 
 def add_to_list(uid, uname, list_name):
-    if list_name == "орг" and uid not in org_list:        org_list[uid]  = {"username": uname or "noname"}
+    if list_name   == "орг"     and uid not in org_list:  org_list[uid]  = {"username": uname or "noname"}
     elif list_name == "история" and uid not in hist_list: hist_list[uid] = {"username": uname or "noname"}
     else:                                                 return False
     return True

@@ -68,6 +68,8 @@ async def cmd_queue(message: Message):
 # GET POSITION
 @dp.message(Command("join"))
 async def cmd_join(message: Message):
+    now = datetime.now()
+
     arg = message.text[len("/join"):].lower().strip()
     
     # PARSE ARG
@@ -80,18 +82,24 @@ async def cmd_join(message: Message):
     # CHECK HAS USER ENTRY
     if (arg == "орг" and uid in org_list) or (arg == "история" and uid in hist_list):
         await message.answer( f"⚠️ Ты ужe в очереди {arg}!" )
-        logging.info(f"@{uname} tried to join to queue more than 1 time")
+        logging.info(f"@{uname}: {entries_limit_log}")
         return
+
+    # CHECK IS PERMITTED JOINING(TIME OF REGISTRATION)
+    if (arg == "история" and not(now.weekday() == 2 and 9  <= now.hour <= 12)):
+        await message.answer( f"{locked_auth}" ); logging.info( f"@{uname}: {time_limit_log}" ); return
+    if (arg == "орг"     and not(now.weekday() == 3 and 11 <= now.hour <= 18)):
+        await message.answer( f"{locked_auth}" ); logging.info( f"@{uname}: {time_limit_log}" ); return
     
     # ADD
     if add_to_list(uid, uname, arg):
-        logging.info(f"@{uname} was added to {arg} queue")
+        logging.info(f"@{uname}: {adding_user_log} {arg}")
         await message.answer(
             f"✅ @{uname} добавлен в очередь {arg}!\n\n"
             f"{get_list_status()}"
         )
     else:
-        logging.info(f"Cannot add {uname} to {arg} queue")
+        logging.info(f"@{uname}: {adding_user_err_log} {arg}")
         await message.answer("❌ Ошибка добавления :( ")
 
 
@@ -100,13 +108,13 @@ async def send_notification():
     now = datetime.now()
 
     # HISTORY
-    if now.weekday() == 2 and now.hour == 7:
+    if now.weekday() == 2 and now.hour == 9:
         for uid in list(users_db):
             try:
                 await bot.send_message( chat_id=uid, text=history_not )
-                logging.info(f"Sended message to {uid}")
+                logging.info(f"@{users_db.get(uid, {}).get('username', 'Unknown')}: {sending_mes_log}")
             except Exception as e:
-                logging.error(f"Cannot send message to {uid}: {e}")
+                logging.error(f"@{users_db.get(uid, {}).get('username', 'Unknown')}: {sending_mes_err_log} ({e})")
                 if "blocked" in str(e).lower() or "not found" in str(e).lower(): # Delete non-active users 
                     users_db.discard(uid)
 
@@ -115,9 +123,9 @@ async def send_notification():
         for uid in list(users_db):
             try:
                 await bot.send_message( chat_id=uid, text=org_not )
-                logging.info(f"Sended message to {uid}")
+                logging.info(f"@{users_db.get(uid, {}).get('username', 'Unknown')}: {sending_mes_log}")
             except Exception as e:
-                logging.error(f"Cannot send message to {uid}: {e}")
+                logging.error(f"@{users_db.get(uid, {}).get('username', 'Unknown')}: {sending_mes_err_log} ({e})")
                 if "blocked" in str(e).lower() or "not found" in str(e).lower(): # Delete non-active users 
                     users_db.discard(uid)
 
@@ -125,7 +133,7 @@ async def send_notification():
 async def notification_checker():
     while True:
         await send_notification()
-        await asyncio.sleep(3600) # WAIT 1H
+        await asyncio.sleep(1800) # WAIT 1H
 
 async def main():
     asyncio.create_task(notification_checker())
