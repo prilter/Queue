@@ -5,10 +5,10 @@ users_db  = {} # {user_id: {"username": "@nick"}}
 org_list  = {} # {user_id: {"username": "@nick"}} for "орг"
 hist_list = {} # {user_id: {"username": "@nick"}} for "история"
 
-is_permitted_joining = True 
+is_kill_time_limit = False
 
 def adduser(uid, uname): # SMART ADDING USER TO UB(user base)
-    users_db[uid] = {"username": uname or "no_username"}
+    users_db[uid] = {"username": uname or "noname"}
 
 def add_to_list(uid, uname, list_name):
     if list_name   == "орг"     and uid not in org_list:  org_list[uid]  = {"username": uname or "noname"}
@@ -17,6 +17,6 @@ def add_to_list(uid, uname, list_name):
     return True
 
 def get_list_status():
-    return f"📋 **ОЧЕРЕДИ**\n• орг: {len(org_list)} чел.\n• история: {len(hist_list)} чел."
+    return f"📋 ОЧЕРЕДИ\n• орг: {len(org_list)} чел.\n• история: {len(hist_list)} чел."
 
 def get_unames_by_list(list): return [f"@{data["username"]}" for user_id, data in list.items()]

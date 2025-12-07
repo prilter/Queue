@@ -1,2 +1,2 @@
-# The repository is the way to show others code of my TG bot for controling queues in my university
+# This repository contains the open-source program of my TG bot for controlling queues at my university
 

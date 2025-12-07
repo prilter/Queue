@@ -86,10 +86,11 @@ async def cmd_join(message: Message):
         return
 
     # CHECK IS PERMITTED JOINING(TIME OF REGISTRATION)
-    if (arg == "история" and not(now.weekday() == 2 and 9  <= now.hour <= 12)):
-        await message.answer( f"{locked_auth}" ); logging.info( f"@{uname}: {time_limit_log}" ); return
-    if (arg == "орг"     and not(now.weekday() == 3 and 11 <= now.hour <= 18)):
-        await message.answer( f"{locked_auth}" ); logging.info( f"@{uname}: {time_limit_log}" ); return
+    if not is_kill_time_limit:
+        if (arg == "история" and not(now.weekday() == 2 and 9  <= now.hour <= 12)):
+            await message.answer( f"{locked_auth}" ); logging.info( f"@{uname}: {time_limit_log}" ); return
+        if (arg == "орг"     and not(now.weekday() == 3 and 11 <= now.hour <= 18)):
+            await message.answer( f"{locked_auth}" ); logging.info( f"@{uname}: {time_limit_log}" ); return
     
     # ADD
     if add_to_list(uid, uname, arg):
@@ -102,6 +103,26 @@ async def cmd_join(message: Message):
         logging.info(f"@{uname}: {adding_user_err_log} {arg}")
         await message.answer("❌ Ошибка добавления :( ")
 
+# DONE CMD
+@dp.message(Command("done"))
+async def cmd_done(message: Message):
+    uid, uname = message.from_user.id, message.from_user.username
+    arg = message.text[len("/done"):].lower().strip()
+
+    if arg == "":          await message.answer(no_args)
+    elif arg == "орг":     del org_list[uid] ; logging.info( f"@{uname}: {del_user_from_queue_log}" )
+    elif arg == "история": del hist_list[uid]; logging.info( f"@{uname}: {del_user_from_queue_log}" )
+    else:                  await message.answer(cannot_recognize)
+
+# ADMIN: LIMITS
+@dp.message(Command("limits"))
+async def cmd_limits(message: Message):
+    global is_kill_time_limit
+    if message.text[len("/limits"):].strip() == APIS.kill_limits_pass:
+        is_kill_time_limit = not is_kill_time_limit
+        await message.answer( f"Админ изменил параметр is_kill_time_limit: {is_kill_time_limit}" )
+    else:
+        await message.asnwer( f"Неверный пароль администратора" )
 
 # SEND NOTIFICATION EVERY SATURDAY
 async def send_notification():
