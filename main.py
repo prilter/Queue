@@ -84,8 +84,8 @@ async def org_selected(callback: CallbackQuery):
     uid, uname = callback.from_user.id, callback.from_user.username
 
     adduser(uid, uname, org_name)
-    await callback.message.edit_text(f"✅Выбрано ОРГ")
-    await callback.answer("Орг выбран!")
+    await callback.message.edit_text(f"✅Выбрано {org_name}")
+    await callback.answer(f"{org_name} выбран!")
 
     print(users_db)
 
@@ -94,8 +94,8 @@ async def hist_selected(callback: CallbackQuery):
     uid, uname = callback.from_user.id, callback.from_user.username
 
     adduser(uid, uname, hist_name)
-    await callback.message.edit_text(f"✅ Выбрана история")
-    await callback.answer("История выбрана!")
+    await callback.message.edit_text(f"✅ Выбрана {hist_name}")
+    await callback.answer(f"{hist_name} выбрана!")
 
     print(users_db)
 
@@ -149,10 +149,9 @@ async def cmd_join(message: Message):
 async def cmd_done(message: Message):
     uid, uname = message.from_user.id, message.from_user.username
 
-    if not users_db[uid]["subject"]:               await message.answer(no_args)
-    elif   users_db[uid]["subject"] == org_name:   del org_list[uid] ; logging.info( f"@{uname}: {del_user_from_queue_log}" )
-    elif   users_db[uid]["subject"] == hist_name:  del hist_list[uid]; logging.info( f"@{uname}: {del_user_from_queue_log}" )
-    else:                                          await message.answer(no_sub)
+    if   users_db[uid]["subject"] == org_name:   delete(org_list, uid) ; logging.info( f"@{uname}: {del_user_from_queue_log}" )
+    elif users_db[uid]["subject"] == hist_name:  delete(hist_list, uid); logging.info( f"@{uname}: {del_user_from_queue_log}" )
+    else:                                        await message.answer(no_sub)
 
 # ADMIN: LIMITS
 @dp.message(Command("limits"))

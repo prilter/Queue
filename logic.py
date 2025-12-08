@@ -5,7 +5,7 @@ users_db  = {} # {user_id: {"username": "@nick", "subject": "math"}}
 org_list  = {} # {user_id: {"username": "@nick"}} for "орг"
 hist_list = {} # {user_id: {"username": "@nick"}} for "история"
 
-hist_name = "история"
+hist_name = "История"
 org_name  = "ОРГ"
 
 is_kill_time_limit = False
@@ -20,3 +20,5 @@ def add_to_list(uid, uname, list_name):
 
 def get_list_status():        return f"📋 ОЧЕРЕДИ\n• орг: {len(org_list)} чел.\n• история: {len(hist_list)} чел."
 def get_unames_by_list(list): return [f"@{data["username"]}" for user_id, data in list.items()]
+def delete(list, id):
+    if id in list: del list[id]
