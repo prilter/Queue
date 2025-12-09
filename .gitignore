@@ -1,3 +1,6 @@
 APIS.py
 __pycache__
 
+.hist_db
+.org_db
+.users_db

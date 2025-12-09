@@ -31,9 +31,11 @@ bot = Bot(token=BOT_TOKEN)
 @dp.message(Command("start"))
 async def cmd_start(message: Message):
     # UID
+    get_users_db(users_db)
     uid, uname = message.from_user.id, message.from_user.username
-    refresh_db(uid, uname)
-
+    if uid not in users_db:
+        adduser(uid, uname, None)
+        save_users_db(users_db)
     if users_db: print(users_db)
 
     # REPLY BUTTONS
@@ -74,11 +76,6 @@ async def cmd_rules(message: Message):
 # CHOOSE SUBJECT
 @dp.message(F.text == choose_subject_text)
 async def cmd_select_sub(message: Message):
-    # CHECK USERNAME
-    uid, uname = message.from_user.id, message.from_user.username
-    refresh_db(uid, uname)
-
-    # INLINE BUTTONS
     inline_kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="📂 Орг",     callback_data="org")],
         [InlineKeyboardButton(text="📖 История", callback_data="hist")],
@@ -90,16 +87,20 @@ async def org_selected(callback: CallbackQuery):
     uid, uname = callback.from_user.id, callback.from_user.username
 
     adduser(uid, uname, org_name)
-    save_users_db(users_db)
     await callback.message.edit_text(f"✅Выбрано {org_name}")
+    await callback.answer(f"{org_name} выбран!")
+
+    print(users_db)
 
 @dp.callback_query(F.data == "hist") 
 async def hist_selected(callback: CallbackQuery):
     uid, uname = callback.from_user.id, callback.from_user.username
 
     adduser(uid, uname, hist_name)
-    save_users_db(users_db)
     await callback.message.edit_text(f"✅ Выбрана {hist_name}")
+    await callback.answer(f"{hist_name} выбрана!")
+
+    print(users_db)
 
 
 # CHECK QUEUE CMD
@@ -116,7 +117,6 @@ async def cmd_queue(message: Message):
 async def cmd_join(message: Message):
     now = datetime.now()
     uid, uname = message.from_user.id, message.from_user.username
-    refresh_db(uid, uname)
 
     # CHECK SUB
     if not users_db[uid]["subject"]:
@@ -137,7 +137,7 @@ async def cmd_join(message: Message):
             await message.answer( f"{locked_auth}" ); logging.info( f"@{uname}: {time_limit_log}" ); return
     
     # ADD
-    if add_to_list_and_save(uid, uname, users_db[uid]["subject"]):
+    if add_to_list(uid, uname, users_db[uid]["subject"]):
         logging.info(f"@{uname}: {adding_user_log} {users_db[uid]['subject']}")
         await message.answer(
             f"✅ @{uname} добавлен в очередь {users_db[uid]['subject']}!\n\n"
@@ -151,10 +151,9 @@ async def cmd_join(message: Message):
 @dp.message(F.text == done_button_text)
 async def cmd_done(message: Message):
     uid, uname = message.from_user.id, message.from_user.username
-    refresh_db(uid, uname)
 
-    if   users_db[uid]["subject"] == org_name:   delete(org_list, uid) ; save_queue_db(org_list, orgsrc);   logging.info( f"@{uname}: {del_user_from_queue_log}" )
-    elif users_db[uid]["subject"] == hist_name:  delete(hist_list, uid); save_queue_db(hist_list, histsrc); logging.info( f"@{uname}: {del_user_from_queue_log}" )
+    if   users_db[uid]["subject"] == org_name:   delete(org_list, uid) ; logging.info( f"@{uname}: {del_user_from_queue_log}" )
+    elif users_db[uid]["subject"] == hist_name:  delete(hist_list, uid); logging.info( f"@{uname}: {del_user_from_queue_log}" )
     else:                                        await message.answer(no_sub)
 
 # ADMIN: LIMITS
@@ -200,9 +199,6 @@ async def notification_checker():
         await asyncio.sleep(1800) # WAIT 1H
 
 async def main():
-    get_users_db(users_db)
-    get_queue_db(org_list, orgsrc); get_queue_db(hist_list, histsrc);
-    print(org_list)
     asyncio.create_task(notification_checker())
     await dp.start_polling(bot)
 
