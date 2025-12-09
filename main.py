@@ -5,6 +5,10 @@ from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 from aiogram.types import Message
 
+# SECRET VARIABLES
+from dotenv import load_dotenv
+from os import getenv
+
 # REPLY BUTTON
 from aiogram.utils.keyboard import ReplyKeyboardBuilder
 from aiogram import F
@@ -16,12 +20,12 @@ from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMar
 from datetime import datetime, time
 
 # FILES WITH VARIABLES
-import APIS
 from info import *
-from logic import *
+from db   import *
 
 # MAIN
-BOT_TOKEN = APIS.BOT_API
+load_dotenv() # LOAD .env
+BOT_TOKEN = getenv("BOT_API")
 logging.basicConfig(level=logging.INFO)
 
 dp = Dispatcher()
@@ -32,8 +36,7 @@ bot = Bot(token=BOT_TOKEN)
 async def cmd_start(message: Message):
     # UID
     uid, uname = message.from_user.id, message.from_user.username
-    refresh_db(uid, uname)
-
+    adduser(uid, uname, None, False, False)
     if users_db: print(users_db)
 
     # REPLY BUTTONS
@@ -76,12 +79,11 @@ async def cmd_rules(message: Message):
 async def cmd_select_sub(message: Message):
     # CHECK USERNAME
     uid, uname = message.from_user.id, message.from_user.username
-    refresh_db(uid, uname)
 
     # INLINE BUTTONS
     inline_kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="📂 Орг",     callback_data="org")],
-        [InlineKeyboardButton(text="📖 История", callback_data="hist")],
+        [InlineKeyboardButton(text=f"📂 {org_name}",  callback_data="org")],
+        [InlineKeyboardButton(text=f"📖 {hist_name}", callback_data="hist")],
     ])
     await message.answer("📚 Выбери:", reply_markup=inline_kb)
 
@@ -89,26 +91,29 @@ async def cmd_select_sub(message: Message):
 async def org_selected(callback: CallbackQuery):
     uid, uname = callback.from_user.id, callback.from_user.username
 
-    adduser(uid, uname, org_name)
-    save_users_db(users_db)
+    adduser(uid, uname, org_name, users_db[uid]["hist"], users_db[uid]["org"])
+    logging.info(f"@{uname} choosed {org_name}\n{users_db}")
     await callback.message.edit_text(f"✅Выбрано {org_name}")
 
 @dp.callback_query(F.data == "hist") 
 async def hist_selected(callback: CallbackQuery):
     uid, uname = callback.from_user.id, callback.from_user.username
 
-    adduser(uid, uname, hist_name)
-    save_users_db(users_db)
+    adduser(uid, uname, hist_name, users_db[uid]["hist"], users_db[uid]["org"])
+    logging.info(f"@{uname} choosed {hist_name}\n{users_db}")
     await callback.message.edit_text(f"✅ Выбрана {hist_name}")
 
 
 # CHECK QUEUE CMD
 @dp.message(F.text == check_button_text)
 async def cmd_queue(message: Message):
-    uid = message.from_user.id
-    if users_db[uid]["subject"]   == hist_name: await message.answer( f"Вот очередь:\n\n{'\n'.join(get_unames_by_list(hist_list))}" if hist_list else "Очереди нет!" )
-    elif users_db[uid]["subject"] == org_name:  await message.answer( f"Вот очередь:\n\n{'\n'.join(get_unames_by_list(org_list))}"  if org_list  else "Очереди нет!" )
+    uid, uname = message.from_user.id, message.from_user.username
+
+    if users_db[uid]["subject"]   == hist_name: await message.answer( f"Вот очередь:\n\n{'\n'.join(get_queue_by_sub(hist_name))}" if get_queue_by_sub(hist_name) else "Очереди нет!" )
+    elif users_db[uid]["subject"] == org_name:  await message.answer( f"Вот очередь:\n\n{'\n'.join(get_queue_by_sub(org_name))}"  if get_queue_by_sub(org_name)  else "Очереди нет!" )
     else:                                       await message.answer( f"{no_sub}" )
+
+    logging.info(f"@{uname}: {check_queue_log}({users_db[uid]['subject']})")
 
 
 # GET POSITION
@@ -116,7 +121,6 @@ async def cmd_queue(message: Message):
 async def cmd_join(message: Message):
     now = datetime.now()
     uid, uname = message.from_user.id, message.from_user.username
-    refresh_db(uid, uname)
 
     # CHECK SUB
     if not users_db[uid]["subject"]:
@@ -124,7 +128,7 @@ async def cmd_join(message: Message):
         return
     
     # CHECK HAS USER ENTRY
-    if (users_db[uid]["subject"] == org_name and uid in org_list) or (users_db[uid]["subject"] == hist_name and uid in hist_list):
+    if (users_db[uid]["subject"] == org_name and users_db[uid]["org"]) or (users_db[uid]["subject"] == hist_name and users_db[uid]["hist"]):
         await message.answer( f"⚠️ Ты ужe в очереди на предмет {users_db[uid]['subject']}!" )
         logging.info(f"@{uname}: {entries_limit_log}")
         return
@@ -137,11 +141,11 @@ async def cmd_join(message: Message):
             await message.answer( f"{locked_auth}" ); logging.info( f"@{uname}: {time_limit_log}" ); return
     
     # ADD
-    if add_to_list_and_save(uid, uname, users_db[uid]["subject"]):
+    if add_to_list(uid, uname, users_db[uid]["subject"]):
         logging.info(f"@{uname}: {adding_user_log} {users_db[uid]['subject']}")
         await message.answer(
             f"✅ @{uname} добавлен в очередь {users_db[uid]['subject']}!\n\n"
-            f"{get_list_status()}"
+            #f"{get_list_status()}"
         )
     else:
         logging.info(f"@{uname}: {adding_user_err_log} {users_db[uid]['subject']}")
@@ -151,21 +155,21 @@ async def cmd_join(message: Message):
 @dp.message(F.text == done_button_text)
 async def cmd_done(message: Message):
     uid, uname = message.from_user.id, message.from_user.username
-    refresh_db(uid, uname)
 
-    if   users_db[uid]["subject"] == org_name:   delete(org_list, uid) ; save_queue_db(org_list, orgsrc);   logging.info( f"@{uname}: {del_user_from_queue_log}" )
-    elif users_db[uid]["subject"] == hist_name:  delete(hist_list, uid); save_queue_db(hist_list, histsrc); logging.info( f"@{uname}: {del_user_from_queue_log}" )
+    if   users_db[uid]["subject"] == org_name:   users_db[uid]["org"]  = False; logging.info( f"@{uname}: {del_user_from_queue_log}" )
+    elif users_db[uid]["subject"] == hist_name:  users_db[uid]["hist"] = False; logging.info( f"@{uname}: {del_user_from_queue_log}" )
     else:                                        await message.answer(no_sub)
 
 # ADMIN: LIMITS
 @dp.message(Command("limits"))
 async def cmd_limits(message: Message):
     global is_kill_time_limit
-    if message.text[len("/limits"):].strip() == APIS.kill_limits_pass:
+    if message.text[len("/limits"):].strip() == getenv("kill_limits_pass"):
         is_kill_time_limit = not is_kill_time_limit
         await message.answer( f"Админ изменил параметр is_kill_time_limit: {is_kill_time_limit}" )
     else:
         await message.answer( f"Неверный пароль администратора" )
+    logging.info(f"@{message.from_user.username}: {superuser_operation_log}")
 
 # SEND NOTIFICATION EVERY SATURDAY
 async def send_notification():
@@ -200,9 +204,6 @@ async def notification_checker():
         await asyncio.sleep(1800) # WAIT 1H
 
 async def main():
-    get_users_db(users_db)
-    get_queue_db(org_list, orgsrc); get_queue_db(hist_list, histsrc);
-    print(org_list)
     asyncio.create_task(notification_checker())
     await dp.start_polling(bot)
 

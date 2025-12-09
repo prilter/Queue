@@ -20,6 +20,8 @@ sending_mes_err_log     = "Cannot send message"
 entries_limit_log       = "User tried to join to queue more than 1 time"
 time_limit_log          = "User tried to join before opening queue"
 del_user_from_queue_log = "User was deleted from queue cause he is done his presentation"
+check_queue_log         = "User checked queue"
+superuser_operation_log = "changed all parameters"
 
 # REPLY BUTTONS
 help_button_text    = "❓Хелп меню"

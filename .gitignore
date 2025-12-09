@@ -1,6 +1,2 @@
-APIS.py
+.env
 __pycache__
-
-.hist_db
-.org_db
-.users_db
