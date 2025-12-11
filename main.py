@@ -36,7 +36,7 @@ bot = Bot(token=BOT_TOKEN)
 async def cmd_start(message: Message):
     # UID
     uid, uname = message.from_user.id, message.from_user.username
-    adduser(uid, uname, None, False, False)
+    adduser(uid, uname, None)
     print(get_all_users())
 
     # REPLY BUTTONS
@@ -93,16 +93,16 @@ async def hist_selected(callback: CallbackQuery):
     uid, uname = callback.from_user.id, callback.from_user.username
     user = get_user(uid)
     
-    adduser(uid, uname, org_name, user["hist"], user["org"])
+    adduser(uid, uname, org_name)
     logging.info(f"@{uname} choosed {org_name}")
     await callback.message.edit_text(f"✅ Выбраны {org_name}")
 
-@dp.callback_query(F.data == "hist") 
+@dp.callback_query(F.data == "hist")
 async def hist_selected(callback: CallbackQuery):
     uid, uname = callback.from_user.id, callback.from_user.username
     user = get_user(uid)
     
-    adduser(uid, uname, hist_name, user["hist"], user["org"])
+    adduser(uid, uname, hist_name)
     logging.info(f"@{uname} choosed {hist_name}")
     await callback.message.edit_text(f"✅ Выбрана {hist_name}")
     
@@ -113,8 +113,8 @@ async def cmd_queue(message: Message):
     
     user = get_user(uid)
     
-    if   user["sub"] == hist_name: queue = get_queue_by_sub(hist_name); await message.answer(f"Вот очередь:\n\n{'\n'.join(queue)}" if queue else no_queue)
-    elif user["sub"] == org_name:  queue = get_queue_by_sub(org_name);  await message.answer(f"Вот очередь:\n\n{'\n'.join(queue)}" if queue else no_queue)
+    if   user["sub"] == hist_name: queue = get_queue_by_sub(hist_name); await message.answer(f"Вот очередь на предмет {user['sub']}:\n\n{'\n'.join(queue)}" if queue else no_queue)
+    elif user["sub"] == org_name:  queue = get_queue_by_sub(org_name);  await message.answer(f"Вот очередь на предмет {user['sub']}:\n\n{'\n'.join(queue)}" if queue else no_queue)
     else:                          await message.answer(f"{no_sub}")
 
     logging.info(f"@{uname}: {check_queue_log}({user['sub']})")
@@ -130,13 +130,13 @@ async def cmd_join(message: Message):
     if not user or not user["sub"]:
         await message.answer(f" {no_sub} ")
         return
-    
+
     # CHECK HAS USER ENTRY
-    if (user["sub"] == org_name and user["org"]) or (user["sub"] == hist_name and user["hist"]):
-        await message.answer(f"⚠️ Ты уже в очереди на предмет {user['sub']}!")
+    if get_user_position(uid, user["sub"]) > 0:
+        await message.answer(f"⚠️ Ты уже в очереди на {user['sub']}!")
         logging.info(f"@{uname}: {entries_limit_log}")
         return
-
+    
     # CHECK IS PERMITTED JOINING(TIME OF REGISTRATION)
     if not is_kill_time_limit:
         if (user["sub"] == hist_name and not(now.weekday() == 2 and 9  <= now.hour <= 12)): await message.answer(f"{locked_auth}"); logging.info(f"@{uname}: {time_limit_log}"); return
@@ -144,20 +144,24 @@ async def cmd_join(message: Message):
     
     # ADD
     if add_to_list(uid, uname, user["sub"]):
-        logging.info(f"@{uname}: {adding_user_log} {user['sub']}")
-        await message.answer( f"✅ @{uname} добавлен в очередь {user['sub']}!\n\n")
+        pos = get_user_position(uid, user["sub"])
+        logging.info(f"@{uname}: {adding_user_log} {user['sub']} ({pos} position)")
+        logging.info(f"{get_all_users()}")
+        await message.answer( f"✅ @{uname} добавлен в очередь {user['sub']}!\n📋 Твоя позиция: {pos}")
     else:
         logging.info(f"@{uname}: {adding_user_err_log} {user['sub']}")
-        await message.answer("❌ Ошибка добавления :( ")
+        await message.answer(f"{cannot_add}")
 
 @dp.message(F.text == done_button_text)
 async def cmd_done(message: Message):
     uid, uname = message.from_user.id, message.from_user.username
     user = get_user(uid)
-
-    if   user["sub"] == org_name:  mark_done(uid, org_name); logging.info(f"@{uname}: {del_user_from_queue_log}")
-    elif user["sub"] == hist_name: mark_done(uid, hist_name); logging.info(f"@{uname}: {del_user_from_queue_log}")
-    else:                          await message.answer(no_sub)
+        
+    if user["sub"] == org_name or user["sub"] == hist_name:
+        mark_done(uid, user["sub"])
+        logging.info(f"@{uname}: {del_user_from_queue_log}")
+    else:                                        
+        await message.answer(no_sub)
 
 # ADMIN: LIMITS
 @dp.message(Command("limits"))
