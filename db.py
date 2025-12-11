@@ -27,17 +27,17 @@ def adduser(uid, uname, sub, hist_val, org_val):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     
-    # Проверяем существование пользователя
+    # CHECK USER EXISTING
     cursor.execute('SELECT * FROM users WHERE uid = ?', (uid,))
     if cursor.fetchone():
-        # Обновляем существующего пользователя
+        # REFRESH REAL USER
         cursor.execute('''
             UPDATE users 
             SET uname = ?, sub = ?, hist = ?, org = ?
             WHERE uid = ?
         ''', (uname or "noname", sub, hist_val, org_val, uid))
     else:
-        # Добавляем нового пользователя
+        # ADD NEW USER
         cursor.execute('''
             INSERT INTO users (uid, uname, sub, hist, org)
             VALUES (?, ?, ?, ?, ?)
