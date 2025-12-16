@@ -112,6 +112,7 @@ async def cmd_queue(message: Message):
     uid, uname = message.from_user.id, message.from_user.username
     
     user = get_user(uid)
+    if not user: adduser(uid, uname, None)
     
     if   user["sub"] == hist_name: queue = get_queue_by_sub(hist_name); await message.answer(f"Вот очередь на предмет {user['sub']}:\n\n{'\n'.join(queue)}" if queue else no_queue)
     elif user["sub"] == org_name:  queue = get_queue_by_sub(org_name);  await message.answer(f"Вот очередь на предмет {user['sub']}:\n\n{'\n'.join(queue)}" if queue else no_queue)
@@ -127,7 +128,8 @@ async def cmd_join(message: Message):
 
     # CHECK USER
     user = get_user(uid)
-    if not user or not user["sub"]:
+    if not user: adduser(uid, uname, None)
+    if not user["sub"]:
         await message.answer(f" {no_sub} ")
         return
 
@@ -156,6 +158,7 @@ async def cmd_join(message: Message):
 async def cmd_done(message: Message):
     uid, uname = message.from_user.id, message.from_user.username
     user = get_user(uid)
+    if not user: adduser(uid, uname, None); return
         
     if user["sub"] == org_name or user["sub"] == hist_name:
         mark_done(uid, user["sub"])
